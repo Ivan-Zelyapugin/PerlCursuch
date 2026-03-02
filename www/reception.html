@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Часы приёма деканата</title>
+  <link rel="stylesheet" href="/www/style.css">
+</head>
+<body>
+<header>
+  <nav>
+    <a href="/www/index.html">Главная</a>
+    <a href="/www/history.html">История</a>
+    <a href="/www/departments.html">Кафедры</a>
+    <a href="/www/schedule.html">Расписание</a>
+    <a href="/www/reception.html">Часы приёма</a>
+    <a href="/www/teacher.html">Преподаватели</a>
+  </nav>
+</header>
+
+<div class="fab-nav" aria-label="Быстрая навигация">
+  <a class="fab" href="#top" title="В начало">↑</a>
+  <a class="fab" href="#bottom" title="В конец">↓</a>
+</div>
+
+<div class="container">
+  <a id="top"></a>
+
+  <section class="hero" aria-label="Первый экран">
+    <div class="hero-inner">
+      <div>
+        <h1>Часы приёма декана и заместителей декана</h1>
+        <p>
+          Деканат факультета осуществляет организацию учебного процесса,
+          консультирование студентов по вопросам обучения, перевода,
+          академических задолженностей и иных организационных вопросов.
+          На данной странице представлена информация о часах приёма
+          декана и заместителей декана.
+        </p>
+      </div>
+
+      <div class="hero-media">
+        <img src="/www/img/auditor.png" alt="Аудитория факультета">
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="form" style="margin-top:16px" aria-label="Выбор сотрудника">
+    <div class="card-header"><h2>Выбор сотрудника</h2></div>
+    <div class="card-body">
+      <p class="muted">Выберите декана или заместителя декана и нажмите кнопку.</p>
+
+      <form method="GET" action="/cgi-bin/reception.cgi">
+        <label>
+          Сотрудник:
+          <select name="person_id" required>
+            <option value="">-- выбрать --</option>
+            <option value="1">Фионова Л.Р. (декан)</option>
+            <option value="2">Бычков А.С. (зам. декана по УР)</option>
+            <option value="3">Писарев А.П. (зам. декана по УР)</option>
+            <option value="4">Мойко Н.В. (зам. декана по УР)</option>
+            <option value="5">Катышева М.А. (зам. декана по МПиВД)</option>
+          </select>
+        </label>
+
+        <p style="margin-top:12px">
+          <input class="btn primary" type="submit" value="Показать часы приёма">
+          <a class="btn" href="#top">Наверх</a>
+        </p>
+      </form>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:16px" aria-label="Памятка">
+    <div class="card-header"><h2>Памятка</h2></div>
+    <div class="card-body">
+      <ul class="list">
+        <li>Часы приёма открываются на отдельной странице.</li>
+        <li>Если сотрудник не выбран, запрос не отправляется.</li>
+        <li>Если информация поменялась, достаточно обновить данные в базе и повторить запрос.</li>
+      </ul>
+
+      <p style="margin-top:12px">
+        <a class="btn" href="/www/index.html">На главную</a>
+        <a class="btn" href="#bottom">В конец</a>
+      </p>
+    </div>
+  </section>
+
+  <a id="bottom"></a>
+</div>
+
+<div class="footer">
+  © Факультет вычислительной техники
+</div>
+</body>
+</html>

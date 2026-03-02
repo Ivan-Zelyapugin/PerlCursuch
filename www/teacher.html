@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Поиск преподавателя</title>
+  <link rel="stylesheet" href="/www/style.css">
+</head>
+<body>
+<header>
+  <nav>
+    <a href="/www/index.html">Главная</a>
+    <a href="/www/history.html">История</a>
+    <a href="/www/departments.html">Кафедры</a>
+    <a href="/www/schedule.html">Расписание</a>
+    <a href="/www/reception.html">Часы приёма</a>
+    <a href="/www/teacher.html">Преподаватели</a>
+  </nav>
+</header>
+
+<div class="fab-nav" aria-label="Быстрая навигация">
+  <a class="fab" href="#top" title="В начало">↑</a>
+  <a class="fab" href="#bottom" title="В конец">↓</a>
+</div>
+
+<div class="container">
+  <a id="top"></a>
+
+  <section class="hero" aria-label="Первый экран">
+    <div class="hero-inner">
+      <div>
+        <h1>Поиск преподавателя</h1>
+        <p>
+          Здесь можно найти занятия преподавателя по расписанию: в каких группах,
+          в какие дни и в каких аудиториях проходят пары.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn primary" href="#form">Начать поиск</a>
+          <a class="btn" href="/www/index.html">На главную</a>
+        </div>
+      </div>
+
+      <div class="hero-media">
+        <img src="/www/img/auditor.png" alt="Аудитория факультета">
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="form" style="margin-top:16px" aria-label="Форма поиска">
+    <div class="card-header"><h2>Поиск</h2></div>
+    <div class="card-body">
+      <p class="muted">Введите фамилию или часть фамилии (например: «Иванов»).</p>
+      <form method="GET" action="/cgi-bin/teacher.cgi" accept-charset="utf-8">
+        <label>
+          Преподаватель:
+          <input type="text" name="q" required placeholder="например: Иванов">
+        </label>
+
+        <p style="margin-top:12px">
+          <input class="btn primary" type="submit" value="Найти">
+          <a class="btn" href="#top">Наверх</a>
+        </p>
+      </form>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:16px" aria-label="Памятка">
+    <div class="card-header"><h2>Памятка</h2></div>
+    <div class="card-body">
+      <ul class="list">
+        <li>Если введено слишком коротко, результатов может быть много.</li>
+        <li>Выберите преподавателя из списка, чтобы открыть его занятия.</li>
+        <li>Данные берутся из базы расписания.</li>
+      </ul>
+
+      <p style="margin-top:12px">
+        <a class="btn" href="/www/index.html">На главную</a>
+        <a class="btn" href="#bottom">В конец</a>
+      </p>
+    </div>
+  </section>
+
+  <a id="bottom"></a>
+</div>
+
+<div class="footer">
+  © Факультет вычислительной техники
+</div>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Расписание</title>
+  <link rel="stylesheet" href="/www/style.css">
+</head>
+<body>
+<header>
+  <nav>
+    <a href="/www/index.html">Главная</a>
+    <a href="/www/history.html">История</a>
+    <a href="/www/departments.html">Кафедры</a>
+    <a href="/www/schedule.html">Расписание</a>
+    <a href="/www/reception.html">Часы приёма</a>
+    <a href="/www/teacher.html">Преподаватели</a>
+  </nav>
+</header>
+
+<!-- всегда доступная навигация -->
+<div class="fab-nav" aria-label="Быстрая навигация">
+  <a class="fab" href="#top" title="В начало">↑</a>
+  <a class="fab" href="#bottom" title="В конец">↓</a>
+</div>
+
+<div class="container">
+  <a id="top"></a>
+
+  <!-- HERO -->
+  <section class="hero" aria-label="Первый экран">
+    <div class="hero-inner">
+      <div>
+        <h1>Расписание занятий</h1>
+        <p>
+          На странице можно получить актуальное расписание для учебной группы.
+          Выберите группу из списка и отправьте запрос, после чего будет открыта
+          страница с расписанием.
+        </p>
+      </div>
+
+      <div class="hero-media">
+        <img src="/www/img/auditor.png" alt="Аудитория факультета">
+      </div>
+    </div>
+  </section>
+
+  <!-- Форма -->
+  <section class="card" id="form" style="margin-top:16px" aria-label="Выбор группы">
+    <div class="card-header"><h2>Выбор группы</h2></div>
+    <div class="card-body">
+      <p class="muted">
+        Выберите учебную группу и нажмите кнопку, чтобы открыть расписание.
+      </p>
+
+      <form method="GET" action="/cgi-bin/schedule.cgi">
+        <label>
+          Группа:
+          <select name="group_id" required>
+            <option value="">-- выбрать --</option>
+
+            <!-- 1 курс -->
+            <option value="101">24-ИС-1</option>
+            <option value="102">24-ИС-2</option>
+            <option value="103">24-ИТ-1</option>
+            <option value="104">24-ВИ-1</option>
+            <option value="105">24-ВП-1</option>
+
+            <!-- 2 курс -->
+            <option value="201">23-ИС-1</option>
+            <option value="202">23-ИС-2</option>
+            <option value="203">23-ИТ-1</option>
+            <option value="204">23-ВИ-1</option>
+            <option value="205">23-ВП-1</option>
+
+            <!-- 3 курс -->
+            <option value="301">22-ИС-1</option>
+            <option value="302">22-ИС-2</option>
+            <option value="303">22-ИТ-1</option>
+            <option value="304">22-ВИ-1</option>
+            <option value="305">22-ВП-1</option>
+
+            <!-- 4 курс -->
+            <option value="401">21-ИС-1</option>
+            <option value="402">21-ИТ-1</option>
+            <option value="403">21-ВИ-1</option>
+            <option value="404">21-ВП-1</option>
+          </select>
+        </label>
+
+        <p style="margin-top:12px">
+          <input class="btn primary" type="submit" value="Показать расписание">
+          <a class="btn" href="#top">Наверх</a>
+        </p>
+      </form>
+    </div>
+  </section>
+
+  <!-- Памятка -->
+  <section class="card" id="notes" style="margin-top:16px" aria-label="Памятка">
+    <div class="card-header"><h2>Памятка</h2></div>
+    <div class="card-body">
+      <ul class="list">
+        <li>Расписание отображается на отдельной странице.</li>
+        <li>Если группа не выбрана, запрос не отправляется.</li>
+        <li>При изменении расписания достаточно повторно выбрать группу и обновить страницу.</li>
+      </ul>
+
+      <p style="margin-top:12px">
+        <a class="btn" href="/www/index.html">На главную</a>
+        <a class="btn" href="#top">В начало</a>
+        <a class="btn" href="#bottom">В конец</a>
+      </p>
+    </div>
+  </section>
+
+  <a id="bottom"></a>
+</div>
+
+<div class="footer">
+  © Факультет вычислительной техники
+</div>
+</body>
+</html>
