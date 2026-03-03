@@ -21,7 +21,6 @@ print Html::page_begin(title => "Кафедра");
 
 print "<h1>Кафедра</h1>";
 
-# submit/форма (требование)
 print "<form method='GET' action='/cgi/department.cgi'>
   <label>Dept ID:
     <input name='dept_id' value='" . escapeHTML($dept_id) . "'>
@@ -29,10 +28,8 @@ print "<form method='GET' action='/cgi/department.cgi'>
   <input type='submit' value='Показать'>
 </form>";
 
-# картинка-кнопка (требование)
 print "<p>" . Html::img_button(href => "/departments.html", src => "/img/logo.png", alt => "Назад") . "</p>";
 
-# кнопка с JS (требование)
 print "<button type='button' onclick='jsBtn()'>JS кнопка</button>";
 
 if ($dept_id !~ /^\d+$/) {

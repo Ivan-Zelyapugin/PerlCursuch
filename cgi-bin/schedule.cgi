@@ -10,7 +10,6 @@ use CGI qw(:standard);
 
 require "db.pm";
 
-# Путь к данным
 my $data = "$Bin/./data";
 
 my %weekday_name = (
@@ -65,7 +64,7 @@ sub html_header {
 
         const rows = card.querySelectorAll("table tr");
         rows.forEach((tr, idx) => {
-          if (idx === 0) return; // заголовок таблицы
+          if (idx === 0) return; 
           const cells = tr.querySelectorAll("td");
           const line = Array.from(cells).map(td => td.textContent.trim()).join(" | ");
           if (line) out += "  " + line + "\\n";
@@ -84,7 +83,6 @@ sub html_header {
         await navigator.clipboard.writeText(out);
         alert("Расписание скопировано в буфер обмена.");
       } catch (e) {
-        // fallback
         const ta = document.createElement("textarea");
         ta.value = out;
         document.body.appendChild(ta);
@@ -108,6 +106,7 @@ sub html_header {
     <a href="/www/departments.html">Кафедры</a>
     <a href="/www/schedule.html">Расписание</a>
     <a href="/www/reception.html">Часы приёма</a>
+    <a href="/www/teacher.html">Преподаватели</a>
   </nav>
 </header>
 
@@ -134,7 +133,6 @@ sub html_footer {
 HTML
 }
 
-# Имя группы из groups.db
 sub get_group_name {
   my ($gid) = @_;
   my $rows = Db::find_by("$data/groups.db", "group_id", $gid);
@@ -142,7 +140,6 @@ sub get_group_name {
   return $rows->[0]->{name};
 }
 
-# Строки расписания по group_id
 sub get_group_schedule_rows {
   my ($gid) = @_;
   my $rows = Db::find_by("$data/schedule.db", "group_id", $gid);
@@ -155,7 +152,6 @@ sub get_group_schedule_rows {
   return \@sorted;
 }
 
-# Группировка по weekday
 sub group_by_weekday {
   my ($rows) = @_;
   my %by;
@@ -215,7 +211,6 @@ print qq{
   </section>
 };
 
-# Разделы страницы (внутренняя навигация)
 print qq{
   <section class="card" id="list" style="margin-top:16px">
     <div class="card-header"><h2>Разделы страницы</h2></div>
@@ -298,7 +293,6 @@ print qq{
 
 my $by = group_by_weekday($rows);
 
-# Обёртка для JS-копирования
 print qq{<div id="schedule-root">};
 
 for my $wd (1..6) {
@@ -350,6 +344,6 @@ for my $wd (1..6) {
   };
 }
 
-print qq{</div>}; # schedule-root
+print qq{</div>}; 
 
 html_footer();

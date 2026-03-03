@@ -11,7 +11,7 @@ use Encode qw(decode);
 
 require "db.pm";
 
-my $data = "$Bin/./data";   # если нужно: "$Bin/../data"
+my $data = "$Bin/./data";   
 
 my %weekday_name = (
   1 => "Понедельник",
@@ -37,8 +37,7 @@ sub dec_param {
   my $v = $cgi->param($name);
   $v = "" if !defined $v;
 
-  # CGI.pm может вернуть байты; приводим к нормальной UTF-8 строке
-  $v = decode("UTF-8", $v, 1);   # 1 = FB_DEFAULT, не падаем на мусоре
+  $v = decode("UTF-8", $v, 1);   
   $v =~ s/^\s+|\s+$//g;
   return $v;
 }
@@ -105,6 +104,7 @@ sub html_header {
     <a href="/www/departments.html">Кафедры</a>
     <a href="/www/schedule.html">Расписание</a>
     <a href="/www/reception.html">Часы приёма</a>
+    <a href="/www/teacher.html">Преподаватели</a>
   </nav>
 </header>
 
@@ -228,7 +228,6 @@ print qq{
     <div class="card-body">
 };
 
-# 1) teacher не выбран -> список совпадений
 if ($teacher eq "") {
   if ($q eq "") {
     print qq{
@@ -292,7 +291,6 @@ if ($teacher eq "") {
   exit;
 }
 
-# 2) teacher выбран -> нагрузка
 my $load = get_teacher_load($teacher);
 
 if (!@$load) {

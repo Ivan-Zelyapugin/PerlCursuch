@@ -97,6 +97,7 @@ sub html_header {
     <a href="/www/departments.html">Кафедры</a>
     <a href="/www/schedule.html">Расписание</a>
     <a href="/www/reception.html">Часы приёма</a>
+    <a href="/www/teacher.html">Преподаватели</a>
   </nav>
 </header>
 
@@ -264,7 +265,7 @@ print qq{<div id="reception-root">};
 
 for my $wd (1..6) {
   my $day_rows = $by->{$wd} || [];
-  next if !@$day_rows; # пустые дни не показываем
+  next if !@$day_rows; 
 
   my $day_title = $weekday_name{$wd};
 
