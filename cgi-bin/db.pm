@@ -44,7 +44,6 @@ sub find_by {
     return \@rows;
 }
 
-# key=value;key=value, с экранированием ; и =
 sub _encode {
     my ($r) = @_;
     my @pairs;

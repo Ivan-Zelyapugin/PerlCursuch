@@ -178,13 +178,11 @@ print qq{
           <a class="btn" href="#content">К результату</a>
           <a class="btn" href="/www/index.html">На главную</a>
 
-          <!-- обычная кнопка с картинкой (как у тебя уже сделано в расписании) -->
           <button type="button" class="btn" onclick="location.href='/www/reception.html'"
                   style="display:inline-flex;align-items:center;gap:8px">
             К выбору
           </button>
 
-          <!-- JS-кнопки -->
           <button type="button" class="btn" onclick="showHelp()">Справка</button>
           <button type="button" class="btn" onclick="copyReception()">Скопировать</button>
           <button type="button" class="btn" onclick="printPage()">Печать</button>
