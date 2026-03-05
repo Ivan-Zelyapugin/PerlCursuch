@@ -7,10 +7,9 @@ use FindBin qw($Bin);
 use lib $Bin;
 
 use CGI qw(:standard);
+use DBI;
 
-require "db.pm";
-
-my $data = "$Bin/./data";
+my $db_path = "$Bin/data/site.sqlite";
 
 my %weekday_name = (
   1 => "Понедельник",
@@ -29,6 +28,22 @@ sub esc {
   $s =~ s/>/&gt;/g;
   $s =~ s/"/&quot;/g;
   return $s;
+}
+
+sub db_connect {
+  my $dbh = DBI->connect(
+    "dbi:SQLite:dbname=$db_path",
+    "",
+    "",
+    {
+      RaiseError     => 1,
+      PrintError     => 0,
+      AutoCommit     => 1,
+      sqlite_unicode => 1,
+    }
+  );
+  $dbh->do("PRAGMA foreign_keys = ON");
+  return $dbh;
 }
 
 sub html_header {
@@ -64,7 +79,7 @@ sub html_header {
 
         const rows = card.querySelectorAll("table tr");
         rows.forEach((tr, idx) => {
-          if (idx === 0) return; 
+          if (idx === 0) return;
           const cells = tr.querySelectorAll("td");
           const line = Array.from(cells).map(td => td.textContent.trim()).join(" | ");
           if (line) out += "  " + line + "\\n";
@@ -134,22 +149,46 @@ HTML
 }
 
 sub get_group_name {
-  my ($gid) = @_;
-  my $rows = Db::find_by("$data/groups.db", "group_id", $gid);
-  return undef if !@$rows;
-  return $rows->[0]->{name};
+  my ($dbh, $gid) = @_;
+  my $sth = $dbh->prepare(q{
+    SELECT name
+    FROM groups
+    WHERE group_id = ?
+  });
+  $sth->execute($gid);
+  my ($name) = $sth->fetchrow_array;
+  return $name; # undef если нет
 }
 
 sub get_group_schedule_rows {
-  my ($gid) = @_;
-  my $rows = Db::find_by("$data/schedule.db", "group_id", $gid);
+  my ($dbh, $gid) = @_;
 
-  my @sorted = sort {
-    ($a->{weekday} <=> $b->{weekday}) ||
-    ($a->{pair_no} <=> $b->{pair_no})
-  } @$rows;
+  # JOIN’ы: subject/teacher/room/time_slots
+  my $sth = $dbh->prepare(q{
+    SELECT
+      e.weekday,
+      e.pair_no,
+      ts.time   AS time,
+      s.name    AS subject,
+      t.name    AS teacher,
+      r.name    AS room,
+      e.note    AS note
+    FROM schedule_entries e
+    JOIN time_slots ts ON ts.pair_no = e.pair_no
+    JOIN subjects   s  ON s.subject_id = e.subject_id
+    JOIN teachers   t  ON t.teacher_id = e.teacher_id
+    JOIN rooms      r  ON r.room_id    = e.room_id
+    WHERE e.group_id = ?
+    ORDER BY e.weekday ASC, e.pair_no ASC
+  });
 
-  return \@sorted;
+  $sth->execute($gid);
+
+  my @rows;
+  while (my $r = $sth->fetchrow_hashref) {
+    push @rows, $r;
+  }
+  return \@rows;
 }
 
 sub group_by_weekday {
@@ -166,7 +205,14 @@ my $q = CGI->new;
 my $group_id = $q->param("group_id") // "";
 $group_id =~ s/\s+//g;
 
-my $group_name = $group_id ? get_group_name($group_id) : undef;
+# если мусор, считаем что не выбрали
+if ($group_id ne "" && $group_id !~ /^\d+$/) {
+  $group_id = "";
+}
+
+my $dbh = db_connect();
+
+my $group_name = $group_id ? get_group_name($dbh, $group_id) : undef;
 my $title = $group_name ? "Расписание — " . esc($group_name) : "Расписание";
 
 html_header($title);
@@ -187,17 +233,15 @@ print qq{
           <a class="btn" href="#content">К расписанию</a>
           <a class="btn" href="/www/index.html">На главную</a>
 
-          <!-- Кнопка-картинка (image button) -->
-          <button 
-            type="button" 
-            class="btn" 
+          <button
+            type="button"
+            class="btn"
             onclick="location.href='/www/schedule.html'"
             style="display:inline-flex;align-items:center;gap:8px"
           >
             К выбору группы
           </button>
 
-          <!-- JS-кнопка со сценарием -->
           <button type="button" class="btn" onclick="showHelp()">Справка</button>
           <button type="button" class="btn" onclick="copySchedule()">Скопировать</button>
           <button type="button" class="btn" onclick="printSchedule()">Печать</button>
@@ -265,12 +309,12 @@ if (!$group_name) {
   exit;
 }
 
-my $rows = get_group_schedule_rows($group_id);
+my $rows = get_group_schedule_rows($dbh, $group_id);
 
 if (!@$rows) {
   print qq{
     <p>Расписание для группы <b>} . esc($group_name) . qq{</b> пока не заполнено.</p>
-    <p class="muted">Добавьте записи в schedule.db через init-скрипт.</p>
+    <p class="muted">Заполните schedule_entries через init-скрипт.</p>
     <p style="margin-top:12px">
       <a class="btn" href="/www/schedule.html">Сменить группу</a>
       <a class="btn" href="#top">Наверх</a>
@@ -316,6 +360,7 @@ for my $wd (1..6) {
           <th>Дисциплина</th>
           <th>Преподаватель</th>
           <th>Аудитория</th>
+          <th>Примечание</th>
         </tr>
     };
 
@@ -327,6 +372,7 @@ for my $wd (1..6) {
           <td>} . esc($r->{subject}) . qq{</td>
           <td>} . esc($r->{teacher}) . qq{</td>
           <td>} . esc($r->{room}) . qq{</td>
+          <td>} . esc($r->{note}) . qq{</td>
         </tr>
       };
     }
@@ -344,6 +390,6 @@ for my $wd (1..6) {
   };
 }
 
-print qq{</div>}; 
+print qq{</div>};
 
 html_footer();

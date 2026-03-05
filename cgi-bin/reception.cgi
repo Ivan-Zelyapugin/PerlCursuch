@@ -7,10 +7,9 @@ use FindBin qw($Bin);
 use lib $Bin;
 
 use CGI qw(:standard);
+use DBI;
 
-require "db.pm";
-
-my $data = "$Bin/./data";
+my $db_path = "$Bin/data/site.sqlite";
 
 my %weekday_name = (
   1 => "Понедельник",
@@ -29,6 +28,24 @@ sub esc {
   $s =~ s/>/&gt;/g;
   $s =~ s/"/&quot;/g;
   return $s;
+}
+
+sub db_connect {
+  my $dbh = DBI->connect(
+    "dbi:SQLite:dbname=$db_path",
+    "",
+    "",
+    {
+      RaiseError     => 1,
+      PrintError     => 0,
+      AutoCommit     => 1,
+      sqlite_unicode => 1,
+    }
+  );
+
+  # На всякий случай (хотя ты и так включал в DDL)
+  $dbh->do("PRAGMA foreign_keys = ON");
+  return $dbh;
 }
 
 sub html_header {
@@ -125,22 +142,31 @@ HTML
 }
 
 sub get_person {
-  my ($pid) = @_;
-  my $rows = Db::find_by("$data/reception_people.db", "person_id", $pid);
-  return undef if !@$rows;
-  return $rows->[0];
+  my ($dbh, $pid) = @_;
+  my $sth = $dbh->prepare(q{
+    SELECT person_id, name, short, role, email, phone
+    FROM people
+    WHERE person_id = ?
+  });
+  $sth->execute($pid);
+  my $row = $sth->fetchrow_hashref;
+  return $row; # undef если нет
 }
 
 sub get_hours_rows {
-  my ($pid) = @_;
-  my $rows = Db::find_by("$data/reception_hours.db", "person_id", $pid);
-
-  my @sorted = sort {
-    ($a->{weekday} <=> $b->{weekday}) ||
-    (($a->{time}||"") cmp ($b->{time}||""))
-  } @$rows;
-
-  return \@sorted;
+  my ($dbh, $pid) = @_;
+  my $sth = $dbh->prepare(q{
+    SELECT hour_id, person_id, weekday, time, note
+    FROM reception_hours
+    WHERE person_id = ?
+    ORDER BY weekday ASC, time ASC
+  });
+  $sth->execute($pid);
+  my @rows;
+  while (my $r = $sth->fetchrow_hashref) {
+    push @rows, $r;
+  }
+  return \@rows;
 }
 
 sub group_by_weekday {
@@ -157,8 +183,15 @@ my $q = CGI->new;
 my $person_id = $q->param("person_id") // "";
 $person_id =~ s/\s+//g;
 
-my $person = $person_id ? get_person($person_id) : undef;
-my $title = $person ? ("Часы приёма — " . esc($person->{short})) : "Часы приёма";
+# Чуть санитарии: если не число, считаем что не выбран
+if ($person_id ne "" && $person_id !~ /^\d+$/) {
+  $person_id = "";
+}
+
+my $dbh = db_connect();
+
+my $person = $person_id ? get_person($dbh, $person_id) : undef;
+my $title  = $person ? ("Часы приёма — " . esc($person->{short})) : "Часы приёма";
 
 html_header($title);
 
@@ -230,7 +263,7 @@ if (!$person) {
   exit;
 }
 
-my $rows = get_hours_rows($person_id);
+my $rows = get_hours_rows($dbh, $person_id);
 
 print qq{
   <p><b>} . esc($person->{name}) . qq{</b></p>
@@ -263,7 +296,7 @@ print qq{<div id="reception-root">};
 
 for my $wd (1..6) {
   my $day_rows = $by->{$wd} || [];
-  next if !@$day_rows; 
+  next if !@$day_rows;
 
   my $day_title = $weekday_name{$wd};
 

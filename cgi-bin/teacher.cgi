@@ -8,10 +8,9 @@ use lib $Bin;
 
 use CGI qw(:standard);
 use Encode qw(decode);
+use DBI;
 
-require "db.pm";
-
-my $data = "$Bin/./data";   
+my $db_path = "$Bin/data/site.sqlite";
 
 my %weekday_name = (
   1 => "Понедельник",
@@ -36,8 +35,7 @@ sub dec_param {
   my ($cgi, $name) = @_;
   my $v = $cgi->param($name);
   $v = "" if !defined $v;
-
-  $v = decode("UTF-8", $v, 1);   
+  $v = decode("UTF-8", $v, 1);
   $v =~ s/^\s+|\s+$//g;
   return $v;
 }
@@ -45,6 +43,22 @@ sub dec_param {
 sub urlenc {
   my ($s) = @_;
   return CGI::escape($s // "");
+}
+
+sub db_connect {
+  my $dbh = DBI->connect(
+    "dbi:SQLite:dbname=$db_path",
+    "",
+    "",
+    {
+      RaiseError     => 1,
+      PrintError     => 0,
+      AutoCommit     => 1,
+      sqlite_unicode => 1,
+    }
+  );
+  $dbh->do("PRAGMA foreign_keys = ON");
+  return $dbh;
 }
 
 sub html_header {
@@ -131,50 +145,76 @@ sub html_footer {
 HTML
 }
 
-sub get_group_name {
-  my ($gid) = @_;
-  my $rows = Db::find_by("$data/groups.db", "group_id", $gid);
-  return $gid if !@$rows;
-  return $rows->[0]->{name} || $gid;
-}
-
-sub get_all_schedule_rows {
-  return Db::get_all("$data/schedule.db");
-}
-
 sub find_teachers_by_query {
-  my ($q) = @_;
-  my $all = get_all_schedule_rows();
+  my ($dbh, $q) = @_;
+  my $sth = $dbh->prepare(q{
+    SELECT teacher_id, name
+    FROM teachers
+    WHERE name LIKE '%' || ? || '%'
+    ORDER BY name ASC
+    LIMIT 200
+  });
+  $sth->execute($q);
 
-  my %uniq;
-  my $q_lc = lc($q);
-
-  for my $r (@$all) {
-    my $t = $r->{teacher} // "";
-    next if $t eq "";
-    if (index(lc($t), $q_lc) != -1) {
-      $uniq{$t} = 1;
-    }
+  my @list;
+  while (my $r = $sth->fetchrow_hashref) {
+    push @list, $r;
   }
-
-  my @list = sort keys %uniq;
   return \@list;
 }
 
+sub resolve_teacher {
+  my ($dbh, $teacher_param) = @_;
+
+  return undef if !defined($teacher_param) || $teacher_param eq "";
+
+  # Если пришёл teacher_id
+  if ($teacher_param =~ /^\d+$/) {
+    my $sth = $dbh->prepare(q{
+      SELECT teacher_id, name
+      FROM teachers
+      WHERE teacher_id = ?
+    });
+    $sth->execute($teacher_param);
+    return $sth->fetchrow_hashref;
+  }
+
+  # Если пришло имя (на случай старых ссылок)
+  my $sth = $dbh->prepare(q{
+    SELECT teacher_id, name
+    FROM teachers
+    WHERE name = ?
+  });
+  $sth->execute($teacher_param);
+  return $sth->fetchrow_hashref;
+}
+
 sub get_teacher_load {
-  my ($teacher_exact) = @_;
-  my $all = get_all_schedule_rows();
+  my ($dbh, $teacher_id) = @_;
 
-  my @rows = grep {
-    defined($_->{teacher}) && $_->{teacher} eq $teacher_exact
-  } @$all;
+  my $sth = $dbh->prepare(q{
+    SELECT
+      e.weekday,
+      e.pair_no,
+      ts.time AS time,
+      g.name  AS group_name,
+      s.name  AS subject,
+      r.name  AS room,
+      e.note  AS note
+    FROM schedule_entries e
+    JOIN time_slots ts ON ts.pair_no = e.pair_no
+    JOIN groups     g  ON g.group_id = e.group_id
+    JOIN subjects   s  ON s.subject_id = e.subject_id
+    JOIN rooms      r  ON r.room_id = e.room_id
+    WHERE e.teacher_id = ?
+    ORDER BY e.weekday ASC, e.pair_no ASC, g.name ASC
+  });
+  $sth->execute($teacher_id);
 
-  @rows = sort {
-    ($a->{weekday} <=> $b->{weekday}) ||
-    ($a->{pair_no} <=> $b->{pair_no}) ||
-    (($a->{group_id}||0) <=> ($b->{group_id}||0))
-  } @rows;
-
+  my @rows;
+  while (my $r = $sth->fetchrow_hashref) {
+    push @rows, $r;
+  }
   return \@rows;
 }
 
@@ -183,13 +223,21 @@ my $cgi = CGI->new;
 my $q       = dec_param($cgi, "q");
 my $teacher = dec_param($cgi, "teacher");
 
+# Мини-санитария: если слишком длинно, режем (чтобы в логах не было цирка)
+$q = substr($q, 0, 100) if length($q) > 100;
+$teacher = substr($teacher, 0, 100) if length($teacher) > 100;
+
+my $dbh = db_connect();
+
+my $teacher_row = ($teacher ne "") ? resolve_teacher($dbh, $teacher) : undef;
+
 my $title = "Поиск преподавателя";
-$title = "Занятия — " . esc($teacher) if $teacher ne "";
+$title = "Занятия — " . esc($teacher_row->{name}) if $teacher_row;
 
 html_header($title);
 
-my $hero_text = ($teacher ne "")
-  ? ("Выбран преподаватель: <b>" . esc($teacher) . "</b>.")
+my $hero_text = ($teacher_row)
+  ? ("Выбран преподаватель: <b>" . esc($teacher_row->{name}) . "</b>.")
   : "";
 
 print qq{
@@ -228,7 +276,8 @@ print qq{
     <div class="card-body">
 };
 
-if ($teacher eq "") {
+# --------- 1) Стадия поиска: teacher ещё не выбран ---------
+if (!$teacher_row) {
   if ($q eq "") {
     print qq{
       <p>Запрос не задан. Перейдите на страницу поиска и введите фамилию.</p>
@@ -242,7 +291,7 @@ if ($teacher eq "") {
     exit;
   }
 
-  my $teachers = find_teachers_by_query($q);
+  my $teachers = find_teachers_by_query($dbh, $q);
 
   if (!@$teachers) {
     print qq{
@@ -268,10 +317,11 @@ if ($teacher eq "") {
   };
 
   for my $t (@$teachers) {
-    my $link = "/cgi-bin/teacher.cgi?q=" . urlenc($q) . "&teacher=" . urlenc($t);
+    # ВАЖНО: передаём teacher_id, а не имя (так стабильнее)
+    my $link = "/cgi-bin/teacher.cgi?q=" . urlenc($q) . "&teacher=" . urlenc($t->{teacher_id});
     print qq{
       <tr>
-        <td>} . esc($t) . qq{</td>
+        <td>} . esc($t->{name}) . qq{</td>
         <td><a href="$link">Открыть занятия</a></td>
       </tr>
     };
@@ -291,12 +341,13 @@ if ($teacher eq "") {
   exit;
 }
 
-my $load = get_teacher_load($teacher);
+# --------- 2) Стадия просмотра нагрузки выбранного преподавателя ---------
+my $load = get_teacher_load($dbh, $teacher_row->{teacher_id});
 
 if (!@$load) {
   print qq{
-    <p>Для преподавателя <b>} . esc($teacher) . qq{</b> в расписании нет записей.</p>
-    <p class="muted">Если вы выбирали из списка, проверьте заполнение поля teacher в schedule.db.</p>
+    <p>Для преподавателя <b>} . esc($teacher_row->{name}) . qq{</b> в расписании нет записей.</p>
+    <p class="muted">Проверьте заполнение schedule_entries.</p>
     <p style="margin-top:12px">
       <a class="btn primary" href="/www/teacher.html">Новый поиск</a>
       <a class="btn" href="#top">Наверх</a>
@@ -308,7 +359,7 @@ if (!@$load) {
 }
 
 print qq{
-  <p>Ниже показаны занятия преподавателя <b>} . esc($teacher) . qq{</b> по текущему расписанию.</p>
+  <p>Ниже показаны занятия преподавателя <b>} . esc($teacher_row->{name}) . qq{</b> по текущему расписанию.</p>
   <p style="margin-top:12px">
     <a class="btn" href="/www/teacher.html">Новый поиск</a>
     <a class="btn" href="#top">Наверх</a>
@@ -329,23 +380,23 @@ print qq{
           <th>Группа</th>
           <th>Дисциплина</th>
           <th>Аудитория</th>
+          <th>Примечание</th>
         </tr>
 };
 
 for my $r (@$load) {
   my $wd  = int($r->{weekday} || 0);
   my $day = $weekday_name{$wd} || "—";
-  my $gid = $r->{group_id} // "";
-  my $gname = get_group_name($gid);
 
   print qq{
         <tr>
           <td>} . esc($day) . qq{</td>
           <td>} . esc($r->{pair_no}) . qq{</td>
           <td>} . esc($r->{time}) . qq{</td>
-          <td>} . esc($gname) . qq{</td>
+          <td>} . esc($r->{group_name}) . qq{</td>
           <td>} . esc($r->{subject}) . qq{</td>
           <td>} . esc($r->{room}) . qq{</td>
+          <td>} . esc($r->{note}) . qq{</td>
         </tr>
   };
 }
