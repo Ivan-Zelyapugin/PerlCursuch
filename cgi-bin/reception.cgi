@@ -2,335 +2,118 @@
 use strict;
 use warnings;
 use utf8;
-
+use CGI qw(:standard);
 use FindBin qw($Bin);
 use lib $Bin;
 
-use CGI qw(:standard);
-use DBI;
+use db;
 
-my $db_path = "$Bin/data/site.sqlite";
+my $dbh = Db::connect_sqlite(db_path => "$Bin/data/site.sqlite");
 
-my %weekday_name = (
-  1 => "Понедельник",
-  2 => "Вторник",
-  3 => "Среда",
-  4 => "Четверг",
-  5 => "Пятница",
-  6 => "Суббота",
+print header(-charset => 'UTF-8');
+print start_html(
+    -title => 'Часы приёма деканата',
+    -style => { -src => '/www/style.css' }
 );
 
-sub esc {
-  my ($s) = @_;
-  $s //= "";
-  $s =~ s/&/&amp;/g;
-  $s =~ s/</&lt;/g;
-  $s =~ s/>/&gt;/g;
-  $s =~ s/"/&quot;/g;
-  return $s;
-}
+my $staff_list = $dbh->selectall_arrayref(
+    "SELECT staff_id, name, position FROM staff WHERE is_teacher = 0 ORDER BY staff_id",
+    { Slice => {} }
+);
 
-sub db_connect {
-  my $dbh = DBI->connect(
-    "dbi:SQLite:dbname=$db_path",
-    "",
-    "",
-    {
-      RaiseError     => 1,
-      PrintError     => 0,
-      AutoCommit     => 1,
-      sqlite_unicode => 1,
-    }
-  );
+my $person_id = param('person_id');
 
-  # На всякий случай (хотя ты и так включал в DDL)
-  $dbh->do("PRAGMA foreign_keys = ON");
-  return $dbh;
-}
-
-sub html_header {
-  my ($title) = @_;
-  print "Content-Type: text/html; charset=utf-8\n\n";
-  print <<"HTML";
-<!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>$title</title>
-  <link rel="stylesheet" href="/www/style.css">
-
-  <script>
-    function showHelp() {
-      alert("Подсказка:\\nВыберите сотрудника на странице «Часы приёма».\\n\\nКнопки: «Скопировать» копирует данные в буфер, «Печать» открывает окно печати.");
-    }
-
-    async function copyReception() {
-      const root = document.getElementById("reception-root");
-      if (!root) { alert("Не найден блок данных."); return; }
-
-      let out = "";
-      const dayCards = root.querySelectorAll("[data-day]");
-      dayCards.forEach(card => {
-        const day = card.getAttribute("data-day") || "";
-        out += day + "\\n";
-
-        const rows = card.querySelectorAll("table tr");
-        rows.forEach((tr, idx) => {
-          if (idx === 0) return;
-          const tds = tr.querySelectorAll("td");
-          const line = Array.from(tds).map(td => td.textContent.trim()).join(" | ");
-          if (line) out += "  " + line + "\\n";
-        });
-
-        out += "\\n";
-      });
-
-      out = out.trim();
-      if (!out) { alert("Нечего копировать."); return; }
-
-      try {
-        await navigator.clipboard.writeText(out);
-        alert("Скопировано в буфер обмена.");
-      } catch (e) {
-        const ta = document.createElement("textarea");
-        ta.value = out;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        alert("Скопировано (fallback).");
-      }
-    }
-
-    function printPage() { window.print(); }
-  </script>
-</head>
-<body>
+print <<'HTML';
 <header>
   <nav>
-    <a href="/www/index.html">Главная</a>
-    <a href="/www/history.html">История</a>
-    <a href="/www/departments.html">Кафедры</a>
-    <a href="/www/schedule.html">Расписание</a>
-    <a href="/www/reception.html">Часы приёма</a>
-    <a href="/www/teacher.html">Преподаватели</a>
+    <a href="/cgi-bin/index.cgi">Главная</a>
+    <a href="/cgi-bin/history.cgi">История</a>
+    <a href="/cgi-bin/departments.cgi">Кафедры</a>
+    <a href="/cgi-bin/schedule.cgi">Расписание</a>
+    <a href="/cgi-bin/reception.cgi">Часы приёма</a>
+    <a href="/cgi-bin/teacher.cgi">Преподаватели</a>
+    <a href="/cgi-bin/statistics.cgi">Статистика</a>
+    <a href="/cgi-bin/staff_reception.cgi">Приём задолжностей</a>
+    <a href="/cgi-bin/program_subjects.cgi">Дисциплины программы</a>
   </nav>
 </header>
 
-<div class="fab-nav" aria-label="Быстрая навигация">
-  <a class="fab" href="#top" title="В начало">↑</a>
-  <a class="fab" href="#bottom" title="В конец">↓</a>
-</div>
-
 <div class="container">
   <a id="top"></a>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <h1>Часы приёма декана и заместителей декана</h1>
+        <p>Выберите сотрудника и нажмите кнопку, чтобы увидеть часы приёма.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="form" style="margin-top:16px">
+    <div class="card-header"><h2>Выбор сотрудника</h2></div>
+    <div class="card-body">
+      <form method="GET" action="/cgi-bin/reception.cgi">
+        <label>Сотрудник:
+          <select name="person_id" required>
+            <option value="">-- выбрать --</option>
 HTML
+
+for my $s (@$staff_list) {
+    my $selected = ($person_id && $s->{staff_id} == $person_id) ? 'selected' : '';
+    print qq{<option value="$s->{staff_id}" $selected>$s->{name} ($s->{position})</option>\n};
 }
 
-sub html_footer {
-  print <<"HTML";
-  <a id="bottom"></a>
+print <<'HTML';
+          </select>
+        </label>
+        <p style="margin-top:12px">
+          <input class="btn primary" type="submit" value="Показать часы приёма">
+          <a class="btn" href="#top">Наверх</a>
+        </p>
+      </form>
+    </div>
+  </section>
+HTML
+
+if ($person_id) {
+
+    my $sql = q{
+        SELECT weekday, time
+        FROM reception_hours
+        WHERE staff_id = ?
+        ORDER BY weekday, time
+    };
+    my $hours = $dbh->selectall_arrayref($sql, { Slice => {} }, $person_id);
+
+    my @weekdays = qw(Понедельник Вторник Среда Четверг Пятница Суббота Воскресенье);
+
+    print qq{
+  <section class="card" style="margin-top:16px">
+    <div class="card-header"><h2>Часы приёма</h2></div>
+    <div class="card-body">
+};
+
+    if (@$hours) {
+        print "<table>\n<tr><th>День недели</th><th>Время</th></tr>\n";
+        for my $h (@$hours) {
+            my $day_name = $weekdays[$h->{weekday}-1];
+            print qq{<tr><td>$day_name</td><td>$h->{time}</td></tr>\n};
+        }
+        print "</table>\n";
+    } else {
+        print "<p>Часы приёма для выбранного сотрудника пока не заданы.</p>\n";
+    }
+
+    print "</div></section>\n";
+}
+
+print <<'HTML';
 </div>
 
 <div class="footer">
   © Факультет вычислительной техники
 </div>
-</body>
-</html>
 HTML
-}
 
-sub get_person {
-  my ($dbh, $pid) = @_;
-  my $sth = $dbh->prepare(q{
-    SELECT person_id, name, short, role, email, phone
-    FROM people
-    WHERE person_id = ?
-  });
-  $sth->execute($pid);
-  my $row = $sth->fetchrow_hashref;
-  return $row; # undef если нет
-}
-
-sub get_hours_rows {
-  my ($dbh, $pid) = @_;
-  my $sth = $dbh->prepare(q{
-    SELECT hour_id, person_id, weekday, time, note
-    FROM reception_hours
-    WHERE person_id = ?
-    ORDER BY weekday ASC, time ASC
-  });
-  $sth->execute($pid);
-  my @rows;
-  while (my $r = $sth->fetchrow_hashref) {
-    push @rows, $r;
-  }
-  return \@rows;
-}
-
-sub group_by_weekday {
-  my ($rows) = @_;
-  my %by;
-  for my $r (@$rows) {
-    my $wd = int($r->{weekday} || 0);
-    push @{$by{$wd}}, $r if $wd >= 1 && $wd <= 6;
-  }
-  return \%by;
-}
-
-my $q = CGI->new;
-my $person_id = $q->param("person_id") // "";
-$person_id =~ s/\s+//g;
-
-# Чуть санитарии: если не число, считаем что не выбран
-if ($person_id ne "" && $person_id !~ /^\d+$/) {
-  $person_id = "";
-}
-
-my $dbh = db_connect();
-
-my $person = $person_id ? get_person($dbh, $person_id) : undef;
-my $title  = $person ? ("Часы приёма — " . esc($person->{short})) : "Часы приёма";
-
-html_header($title);
-
-my $hero_text = $person
-  ? ("Выбран сотрудник: <b>" . esc($person->{short}) . "</b>.")
-  : "Выберите сотрудника на странице часов приёма, чтобы увидеть расписание.";
-
-print qq{
-  <section class="hero" aria-label="Первый экран">
-    <div class="hero-inner">
-      <div>
-        <h1>Часы приёма</h1>
-        <p>$hero_text</p>
-
-        <div class="hero-actions">
-          <a class="btn primary" href="/www/reception.html">Сменить сотрудника</a>
-          <a class="btn" href="#content">К результату</a>
-          <a class="btn" href="/www/index.html">На главную</a>
-
-          <button type="button" class="btn" onclick="location.href='/www/reception.html'"
-                  style="display:inline-flex;align-items:center;gap:8px">
-            К выбору
-          </button>
-
-          <button type="button" class="btn" onclick="showHelp()">Справка</button>
-          <button type="button" class="btn" onclick="copyReception()">Скопировать</button>
-          <button type="button" class="btn" onclick="printPage()">Печать</button>
-        </div>
-      </div>
-
-      <div class="hero-media">
-        <img src="/www/img/auditor.png" alt="Аудитория факультета">
-      </div>
-    </div>
-  </section>
-};
-
-print qq{
-  <section class="card" id="content" style="margin-top:16px">
-    <div class="card-header"><h2>Результат</h2></div>
-    <div class="card-body">
-};
-
-if (!$person_id) {
-  print qq{
-    <p>Сотрудник не выбран. Вернитесь на страницу часов приёма и выберите сотрудника.</p>
-    <p style="margin-top:12px">
-      <a class="btn primary" href="/www/reception.html">Выбрать сотрудника</a>
-      <a class="btn" href="/www/index.html">На главную</a>
-      <a class="btn" href="#top">Наверх</a>
-    </p>
-  };
-  print qq{</div></section>};
-  html_footer();
-  exit;
-}
-
-if (!$person) {
-  print qq{
-    <p>Неизвестный сотрудник: <b>} . esc($person_id) . qq{</b>.</p>
-    <p class="muted">Проверьте выбор и повторите попытку.</p>
-    <p style="margin-top:12px">
-      <a class="btn primary" href="/www/reception.html">Выбрать сотрудника</a>
-      <a class="btn" href="#top">Наверх</a>
-    </p>
-  };
-  print qq{</div></section>};
-  html_footer();
-  exit;
-}
-
-my $rows = get_hours_rows($dbh, $person_id);
-
-print qq{
-  <p><b>} . esc($person->{name}) . qq{</b></p>
-  <p class="muted">} . esc($person->{role}) . qq{</p>
-  <p class="muted">Контакты: } . esc($person->{phone}) . qq{ · } . esc($person->{email}) . qq{</p>
-  <p style="margin-top:12px">
-    <a class="btn" href="/www/reception.html">Сменить сотрудника</a>
-    <a class="btn" href="#top">Наверх</a>
-    <a class="btn" href="#bottom">В конец</a>
-  </p>
-</div></section>
-};
-
-if (!@$rows) {
-  print qq{
-    <section class="card" style="margin-top:16px">
-      <div class="card-header"><h2>Данные</h2></div>
-      <div class="card-body">
-        <p>Для выбранного сотрудника часы приёма пока не заполнены.</p>
-      </div>
-    </section>
-  };
-  html_footer();
-  exit;
-}
-
-my $by = group_by_weekday($rows);
-
-print qq{<div id="reception-root">};
-
-for my $wd (1..6) {
-  my $day_rows = $by->{$wd} || [];
-  next if !@$day_rows;
-
-  my $day_title = $weekday_name{$wd};
-
-  print qq{
-    <article class="card" id="day$wd" data-day="$day_title" style="margin-top:16px">
-      <div class="card-header"><h2>} . esc($day_title) . qq{</h2></div>
-      <div class="card-body">
-        <table>
-          <tr>
-            <th>Время</th>
-            <th>Примечание</th>
-          </tr>
-  };
-
-  for my $r (@$day_rows) {
-    print qq{
-          <tr>
-            <td>} . esc($r->{time}) . qq{</td>
-            <td>} . esc($r->{note}) . qq{</td>
-          </tr>
-    };
-  }
-
-  print qq{
-        </table>
-        <p style="margin-top:12px">
-          <a class="btn" href="#top">Наверх</a>
-          <a class="btn" href="#content">К результату</a>
-        </p>
-      </div>
-    </article>
-  };
-}
-
-print qq{</div>};
-
-html_footer();
+print end_html;
