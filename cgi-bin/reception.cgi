@@ -38,6 +38,11 @@ print <<'HTML';
   </nav>
 </header>
 
+<div class="fab-nav" aria-label="Быстрая навигация">
+  <a class="fab" href="#top" title="В начало">↑</a>
+  <a class="fab" href="#bottom" title="В конец">↓</a>
+</div>
+
 <div class="container">
   <a id="top"></a>
 
@@ -92,6 +97,7 @@ if ($person_id) {
   <section class="card" style="margin-top:16px">
     <div class="card-header"><h2>Часы приёма</h2></div>
     <div class="card-body">
+    <div id="bottom"></div>
 };
 
     if (@$hours) {
@@ -105,7 +111,9 @@ if ($person_id) {
         print "<p>Часы приёма для выбранного сотрудника пока не заданы.</p>\n";
     }
 
-    print "</div></section>\n";
+    print "</div>
+    
+    </section>\n";
 }
 
 print <<'HTML';

@@ -58,6 +58,12 @@ print <<'HTML';
 <a href="/cgi-bin/program_subjects.cgi">Дисциплины программы</a>
 </nav>
 </header>
+
+<div class="fab-nav" aria-label="Быстрая навигация">
+  <a class="fab" href="#top" title="В начало">↑</a>
+  <a class="fab" href="#bottom" title="В конец">↓</a>
+</div>
+
 <div class="container">
 <a id="top"></a>
 <section class="card">
@@ -137,7 +143,12 @@ if ($teacher_row) {
 <p style="margin-top:12px">
 <a class="btn" href="#top">Наверх</a>
 </p>
-</div></section>
+</div>
+
+
+
+</section>
+<a id ="bottom"></a>
 };
 }
 

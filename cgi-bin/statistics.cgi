@@ -45,6 +45,12 @@ print <<'HTML';
 <a href="/cgi-bin/program_subjects.cgi">Дисциплины программы</a>
 </nav>
 </header>
+
+<div class="fab-nav" aria-label="Быстрая навигация">
+  <a class="fab" href="#top" title="В начало">↑</a>
+  <a class="fab" href="#bottom" title="В конец">↓</a>
+</div>
+
 <div class="container">
 <a id="top"></a>
 <section class="card">
@@ -104,6 +110,9 @@ print <<'HTML';
 <a class="btn" href="/cgi-bin/index.cgi">На главную</a>
 </p>
 </div>
+
+<a id ="bottom"></a>
+
 </section>
 <div class="footer">
 © Факультет вычислительной техники

@@ -38,6 +38,11 @@ print <<'HTML';
   </nav>
 </header>
 
+<div class="fab-nav" aria-label="Быстрая навигация">
+  <a class="fab" href="#top" title="В начало">↑</a>
+  <a class="fab" href="#bottom" title="В конец">↓</a>
+</div>
+
 <div class="container">
   <a id="top"></a>
   <section class="hero">
@@ -99,6 +104,7 @@ if ($group_id) {
   <section class="card" style="margin-top:16px">
     <div class="card-header"><h2>Расписание группы</h2></div>
     <div class="card-body">
+    <div id="bottom"></div>
 };
 
     my %by_day;
@@ -123,7 +129,11 @@ if ($group_id) {
         print "</table>\n";
     }
 
-    print "</div></section>\n";
+    print "</div>
+    
+   
+    
+    </section>\n";
 }
 
 print <<'HTML';

@@ -68,6 +68,11 @@ print <<'HTML';
 </nav>
 </header>
 
+<div class="fab-nav" aria-label="Быстрая навигация">
+  <a class="fab" href="#top" title="В начало">↑</a>
+  <a class="fab" href="#bottom" title="В конец">↓</a>
+</div>
+
 <div class="container">
 <a id="top"></a>
 
@@ -125,7 +130,11 @@ if ($program_id) {
 <p style="margin-top:12px">
 <a class="btn" href="#top">Наверх</a>
 </p>
-</div></section>
+</div>
+
+<a id ="bottom"></a>
+
+</section>
 };
 }
 

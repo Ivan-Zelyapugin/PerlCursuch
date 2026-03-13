@@ -54,6 +54,11 @@ print <<'HTML';
 </nav>
 </header>
 
+<div class="fab-nav" aria-label="Быстрая навигация">
+  <a class="fab" href="#top" title="В начало">↑</a>
+  <a class="fab" href="#bottom" title="В конец">↓</a>
+</div>
+
 <div class="container">
 
 <section class="card">
@@ -117,6 +122,9 @@ print <<'HTML';
 </p>
 
 </div>
+
+<a id ="bottom"></a>
+
 </section>
 
 <div class="footer">

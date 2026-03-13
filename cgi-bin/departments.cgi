@@ -67,6 +67,11 @@ print <<'HTML';
 </nav>
 </header>
 
+<div class="fab-nav" aria-label="Быстрая навигация">
+  <a class="fab" href="#top" title="В начало">↑</a>
+  <a class="fab" href="#bottom" title="В конец">↓</a>
+</div>
+
 <div class="container">
 
 <h1>Кафедры факультета</h1>
@@ -144,6 +149,7 @@ for my $d (@$departments) {
 print <<'HTML';
 </section>
 
+<a id ="bottom"></a>
 </div>
 
 <div class="footer">

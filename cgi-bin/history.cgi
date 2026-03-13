@@ -49,6 +49,11 @@ print <<"HTML";
 </nav>
 </header>
 
+<div class="fab-nav" aria-label="Быстрая навигация">
+  <a class="fab" href="#top" title="В начало">↑</a>
+  <a class="fab" href="#bottom" title="В конец">↓</a>
+</div>
+
 <div class="container">
 
 <h1>$row->{name}</h1>
@@ -68,6 +73,8 @@ $row->{history}
 </div>
 
 </section>
+
+<a id ="bottom"></a>
 
 </div>
 
